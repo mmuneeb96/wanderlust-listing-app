@@ -14,7 +14,7 @@ const reviewRoutes = require("./routes/review.js");
 const userRoutes = require("./routes/user.js");
 const Listing = require("./models/listing");
 
-app.engine("ejs", ejsMate); // Use ejs-mate
+app.engine("ejs", ejsMate);
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 app.use(express.static(path.join(__dirname, "public")));
@@ -25,7 +25,7 @@ const passport = require("passport");
 const LocalStrategy = require("passport-local");
 const User = require("./models/user.js");
 
-const dbUrl = process.env.ATLASDB_URL || "mongodb://127.0.0.1:27017/wanderlust";
+const dbUrl = process.env.ATLASDB_URL;
 
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
@@ -65,10 +65,10 @@ mongoose
   });
 
 app.use(session(sessionOptions));
-app.use(flash());
-
 app.use(passport.initialize());
 app.use(passport.session());
+app.use(flash());
+
 passport.use(new LocalStrategy(User.authenticate()));
 
 passport.serializeUser(User.serializeUser());
@@ -77,19 +77,20 @@ passport.deserializeUser(User.deserializeUser());
 app.use((req, res, next) => {
   res.locals.success = req.flash("success");
   res.locals.error = req.flash("error");
+  console.log(req.user);
   res.locals.currUser = req.user;
   next();
 });
+
+app.use("/listing", listingRoutes);
+app.use("/listing/:id/reviews", reviewRoutes);
+app.use("/", userRoutes);
 
 app.get("/search", async (req, res) => {
   const { search } = req.query;
   const listings = await Listing.find({ location: new RegExp(search, "i") });
   res.render("listings/index", { listings });
 });
-
-app.use("/listing", listingRoutes);
-app.use("/listing/:id/reviews", reviewRoutes);
-app.use("/", userRoutes);
 
 app.all("*", (req, res, next) => {
   next(new ExpressError(404, "Page not found!"));
