@@ -74,6 +74,17 @@ passport.use(new LocalStrategy(User.authenticate()));
 passport.serializeUser(User.serializeUser());
 passport.deserializeUser(User.deserializeUser());
 
+app.get("/search", async (req, res) => {
+  const { search } = req.query;
+  try {
+    const listings = await Listing.find({ location: new RegExp(search, "i") });
+    res.render("listings/index", { listings });
+  } catch (err) {
+    console.log(err);
+    res.render("error", { message: "Failed to fetch listings" });
+  }
+});
+
 app.use((req, res, next) => {
   res.locals.success = req.flash("success");
   res.locals.error = req.flash("error");
@@ -81,23 +92,14 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get("/search", async (req, res) => {
-  const { search } = req.query;
-  const listings = await Listing.find({ location: new RegExp(search, "i") });
-  res.render("listings/index", { listings });
-});
-
-app.use("/listing", listingRoutes);
-app.use("/listing/:id/reviews", reviewRoutes);
-app.use("/", userRoutes);
-
 app.all("*", (req, res, next) => {
   next(new ExpressError(404, "Page not found!"));
 });
 
 app.use((err, req, res, next) => {
   let { statusCode = 500, message = "Something went wrong" } = err;
-  res.status(statusCode).render("error.ejs", { message });
+  console.log(`Error: ${message}`);
+  res.status(statusCode).render("error", { message });
 });
 
 app.listen(8080, () => {
